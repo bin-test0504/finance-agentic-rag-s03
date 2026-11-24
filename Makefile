@@ -33,7 +33,7 @@ embeddings:
 	@ls -la data/embeddings/BAAI_bge-m3.npz
 
 notebook:
-	$(PY) -m jupyter lab notebooks/s03_langgraph.ipynb
+	$(PY) -m jupyter lab notebooks/s03_ingestion.ipynb
 
 test:
 	$(PY) -m pytest -q

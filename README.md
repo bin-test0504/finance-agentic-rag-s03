@@ -15,9 +15,9 @@
 | 폴더 | 무엇 |
 |---|---|
 | `docs/install.md` | 설치. 2회차와 같고, 모델·임베딩 스냅샷 받는 단계가 추가됐습니다 |
-| `docs/session3/` | 실습 순서(lab.md)와 과제(homework.md) |
+| `docs/session3/` | 발표자료(01_발표자료.pdf), 실습과 과제 한 장(03_실습과_과제.pdf), 실습 순서(lab.md), 과제 세부(homework.md) |
 | `docs/templates/adr.md` | 과제 ADR-002 에 쓰는 템플릿. 완성 예시는 `docs/session2/examples/01_ADR-001_청킹_전략.md` |
-| `notebooks/s03_langgraph.ipynb` | LangGraph 15분. 수업 1~2부, 실습 1 |
+| `notebooks/s03_ingestion.ipynb` | LangGraph 15분. 수업 1~2부, 실습 1 |
 | `src/finrag/ingestion/` | 인제스천 그래프. 채울 함수 두 개(`nodes.gate`, `graph.build_ingest_graph`)가 여기 있습니다 |
 | `src/finrag/index/`, `retrieval/`, `eval/` | 임베딩 · Qdrant · Dense 검색 · 평가. 읽기만 합니다 |
 | `pipelines/ingest.py` | 문서 51건을 그래프에 통과시켜 `data/chunks/chunks.jsonl` 과 `data/ingest_report.json` 을 만듭니다 |
