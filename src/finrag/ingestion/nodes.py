@@ -85,7 +85,29 @@ def gate(state: IngestState) -> IngestState:
     # ── TODO: 여기를 채우세요 ──────────────────────────────
     # parse 가 뽑은 페이지를 검증 게이트에 넣고 그 판정을 state["route"] 로 돌려준다.
     # 지원하지 않는 형식(office/missing)은 게이트를 거치지 않고 바로 fail 이다.
-    raise NotImplementedError("TODO: gate 를 구현하세요")
+    kind = state["route"]
+
+    # 규칙 1. office/missing 은 검사기에 넣지 않고 바로 fail.
+    #   형식 때문에 못 읽은 것과 글자가 깨진 것을 구분해 기록하려고.
+    if kind in ("office", "missing"):
+        report = {
+            "doc_id": state["doc_id"],
+            "verdict": "fail",
+            "reasons": [f"지원하지 않는 형식({kind})"],
+            "pages": [],
+            "bad_pages": [],
+            "usable_pages": 0,
+        }
+        return {"report": report, "route": "fail"}
+
+    # 규칙 2. parse 가 뽑은 pages 를 Extraction 으로 싸서 validate 에 넣는다.
+    #   PDF 면 page_objects 도 같이 (이미지 쪽을 알아야 OCR 판정이 된다).
+    ex = Extraction(state["doc_id"], state.get("parser", ""), state.get("pages", []))
+    objs = page_objects(Path(state["path"])) if kind == "pdf" else []
+    rep = validate(ex, objs)
+
+    # 규칙 3. 반환은 둘: report 와 route (route 는 판정 그대로).
+    return {"report": rep.to_dict(), "route": rep.verdict}
 
 
 def reparse(state: IngestState) -> IngestState:
@@ -147,6 +169,41 @@ def ocr(state: IngestState) -> IngestState:
 # (과제) 깨진 페이지 텍스트를 LLM 에게 주고 복원시킨다. 프롬프트에 반드시 넣을 것:
 # 내용을 추측해 채우지 말 것, 판독 불가는 [판독불가] 로 표시할 것.
 # temperature 0 · 결과 캐시 · llm_repaired 표시는 이미 되어 있다.
+#
+# 이 노드의 출력은 약관 "근거"로 인용된다. 그래서 LLM 을 작가가 아니라 교정기로 쓴다:
+# 고칠 수 있는 것(띄어쓰기·끊긴 줄)만 고치고, 글자를 새로 만들어 내는 일은 전부 막는다.
+REPAIR_SYSTEM = """너는 PDF 추출 과정에서 깨진 한국어 금융 약관 텍스트를 복원하는 교정기다.
+작가가 아니다. 원문에 있던 글자를 되살리는 일만 한다.
+
+[해도 되는 것]
+1. 사라진 띄어쓰기를 한국어 어법에 맞게 되살린다.
+2. 줄바꿈 때문에 중간에서 끊긴 단어·문장을 잇는다.
+3. 추출 과정에서 생긴 의미 없는 기호·중복 공백을 지운다.
+
+[절대 하면 안 되는 것]
+1. 내용을 추측해 채우지 마라. 원문에 없는 단어·문장을 만들어 내지 마라.
+2. 숫자·금액·비율·날짜·기간·조항 번호(제N조, ①②)는 한 글자도 바꾸지 마라.
+3. 요약·의역·문장 순서 변경·설명 추가를 하지 마라.
+4. 맞춤법이 틀려 보여도 원문 단어를 다른 단어로 바꾸지 마라.
+5. 원문의 글자·숫자를 지우지 마라. 기호 정리 외에는 원문에 있던 모든 글자와 숫자가 결과에 그대로 남아야 한다.
+6. 표가 깨져 숫자·단위가 흩어져 있을 때, 어느 단어에 붙는지 확신할 수 없으면 옮기지 마라.
+
+[판독 불가]
+- 어떤 글자였는지, 또는 흩어진 숫자가 어디에 붙는지 확신할 수 없으면 추측하지 말고
+  원문 조각을 원래 순서 그대로 둔 채 앞에 [판독불가] 를 붙인다. 예: [판독불가] : 3 1 , 10 , 20 , 1
+- 문장 전체를 읽을 수 없으면 그 문장 자리에 [판독불가] 하나만 남긴다.
+
+[출력]
+- 복원한 본문만 출력한다. 머리말·설명·따옴표·코드블록을 붙이지 않는다.
+- 원문의 문단·조항 순서를 그대로 유지한다."""
+
+REPAIR_USER = """아래 <원문> 안의 텍스트를 위 규칙대로 복원하라.
+
+<원문>
+{raw}
+</원문>"""
+
+
 def llm_repair(state: IngestState) -> IngestState:
     """마지막 수단. 다른 파서로 다시 추출해도 쓸 수 있는 페이지가 없는 문서의 본문을 LLM 이 복구할 수 있는지 본다.
 
@@ -169,9 +226,7 @@ def llm_repair(state: IngestState) -> IngestState:
     pages = list(state["pages"])
     for pno in bad:
         raw = pages[pno - 1][:3000]
-        msg = ("아래는 PDF에서 추출하다 깨진 한국어 금융 문서의 일부다. "
-               "읽을 수 있는 문장만 원문 그대로 복원하고, 판독 불가한 부분은 [판독불가]로 표기하라. "
-               "내용을 추측해 채우지 마라.\n\n---\n" + raw)
+        msg = [("system", REPAIR_SYSTEM), ("human", REPAIR_USER.format(raw=raw))]
         pages[pno - 1] = llm.invoke(msg).content
 
     cache.parent.mkdir(parents=True, exist_ok=True)

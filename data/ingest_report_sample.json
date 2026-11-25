@@ -1,0 +1,20 @@
+{
+ "generated_at": "2026-11-25T07:23:10+00:00",
+ "documents": 1,
+ "chunks": 1,
+ "routes": {
+  "done": 1
+ },
+ "parsers": {
+  "pdfplumber": 1
+ },
+ "verdicts": {
+  "reparse": 1
+ },
+ "llm_repaired": [
+  "knia_4000"
+ ],
+ "synthetic_degraded": [],
+ "failed": [],
+ "skipped_by_checkpoint": 0
+}

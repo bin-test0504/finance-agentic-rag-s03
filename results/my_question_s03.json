@@ -1,0 +1,34 @@
+{
+  "id": "Q2",
+  "source": "개인 질문",
+  "question": "카카오뱅크 정기예금은 만기 전에 일부만 긴급출금할 수 있나요? 몇 번까지, 어떤 조건으로 가능한가요?",
+  "gold_chunk_ids": [
+    "kakao_deposit_terms_2024#제10조#1"
+  ],
+  "quotes": {
+    "kakao_deposit_terms_2024#제10조#1": "최대 2회까지 가능합니다"
+  },
+  "chunk_count": 3694,
+  "runs": {
+    "Dense": {
+      "first_rank": 2,
+      "ranks_by_gold": {
+        "kakao_deposit_terms_2024#제10조#1": 2
+      },
+      "top_ids": [
+        "kakao_deposit_2026_txt#본문#9",
+        "kakao_deposit_terms_2024#제10조#1",
+        "kakao_deposit_special_2019#본문#1",
+        "kakao_deposit_2026_txt#본문#3",
+        "kakao_deposit_2026_pdf#본문#2",
+        "kakao_deposit_2026_pdf#본문#1",
+        "kakao_deposit_2026_txt#본문#12",
+        "kakao_deposit_2026_txt#본문#4",
+        "kakao_deposit_special_2019#본문#2",
+        "kakao_deposit_2026_pdf#본문#7"
+      ],
+      "elapsed_ms": 777.1,
+      "reranked": null
+    }
+  }
+}

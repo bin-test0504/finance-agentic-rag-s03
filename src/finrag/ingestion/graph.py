@@ -39,7 +39,24 @@ def build_ingest_graph(checkpointer=None):
     # 보통 엣지 : g.add_edge(출발, 도착)
     # 조건부 엣지: g.add_conditional_edges(출발, 라우터, {라우터가 돌려주는 값: 도착})
     # 라우터는 nodes.py 맨 아래의 route_after_gate · route_after_reparse · route_after_ocr
-    raise NotImplementedError("실습 3: build_ingest_graph 의 엣지를 연결하세요 (이 줄은 지운다)")
+    # 시작점과 보통 엣지
+    g.set_entry_point("classify")
+    g.add_edge("classify", "parse")
+    g.add_edge("parse", "gate")
+
+    # 조건부 엣지: {라우터가 반환한 키: 실행할 노드}
+    g.add_conditional_edges("gate", N.route_after_gate,
+        {"pass": "chunk", "reparse": "reparse", "ocr": "ocr", "fail": "dead_letter"})
+    g.add_conditional_edges("reparse", N.route_after_reparse,
+        {"pass": "chunk", "ocr": "ocr", "repair": "llm_repair"})
+    g.add_conditional_edges("ocr", N.route_after_ocr,
+        {"chunk": "chunk", "fail": "dead_letter"})
+    g.add_conditional_edges("llm_repair", lambda s: s["route"],
+        {"chunk": "chunk", "fail": "dead_letter"})
+
+    # 끝: chunk, dead_letter → END
+    g.add_edge("chunk", END)
+    g.add_edge("dead_letter", END)
 
     return g.compile(checkpointer=checkpointer)
 
